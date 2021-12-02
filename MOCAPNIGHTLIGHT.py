@@ -394,23 +394,6 @@ def test_Client(host):
 
         if velocity == 4:
             if Dance_offset == 0:
-                # offset = rotation[0]
-                # offset2 = rotation[1]
-                # offset3 = rotation2[1]
-                # offset4 = rotation3[0]
-                # offset5 = rotation2[0]
-                # legoffset = legrotation[0]
-                # leanoffset = rotation3[2]
-                # handoffset1 = handrotation[0]
-                # handoffset2 = handrotation[2]
-                # Lhandoffset1 = Lhandrotation[0]
-                # Lhandoffset2 = Lhandrotation[2]
-                # handoffsetx = handposition[0]
-                # handoffsety = handposition[1]
-                # handoffsetz = handposition[2]
-                # Lhandoffsetx = Lhandposition[0]
-                # Lhandoffsety = Lhandposition[1]
-                # Lhandoffsetz = Lhandposition[2]
                 Calibrate2 = map[:]
                 print("readiong")
 
@@ -459,16 +442,6 @@ def test_Client(host):
                 for a in arms:
                     a.set_mode(1)
                     a.set_state(0)
-                # handoffset1 = handrotation[0]
-                # handoffset2 = handrotation[2]
-                # Lhandoffset1 = Lhandrotation[0]
-                # Lhandoffset2 = Lhandrotation[2]
-                # handoffsetx = handposition[0]
-                # handoffsety = handposition[1]
-                # handoffsetz = handposition[2]
-                # Lhandoffsetx = Lhandposition[0]
-                # Lhandoffsety = Lhandposition[1]
-                # Lhandoffsetz = Lhandposition[2]
 
                 calibratepos = 1
                 calibrated = map[:]
@@ -481,9 +454,15 @@ def test_Client(host):
                     a.set_servo_angle_j(angles=[0.0, -45+handpos[12]/10, 0.0+handpos[13]/10, 45 + handpos[12]/10 + handpos[14]/10, -handpos[8]*40, handpos[7]*40, 0.0],
                                         is_radian=False)
 
-                # for a in right:
-                #     a.set_servo_angle_j(angles=[0.0, 0.0+handpos[9]/20, 0.0+handpos[10]/20, 90 + handpos[9]/20 + handpos[11]/20, -handpos[5], handpos[6], 0.0],
-                #                         is_radian=False)
+#                 for a in right:
+#                     a.set_servo_angle_j(angles=[0.0, 0.0+handpos[9]/20, 0.0+handpos[10]/20, 90 + handpos[9]/20 + handpos[11]/20, -handpos[5], handpos[6], 0.0],
+#                                         is_radian=False)
+
+        if velocity == 7:
+            while velocity ==7:
+                param = danceq.get()
+                velocity = param[1]
+                
 
 
 
