@@ -97,6 +97,48 @@ def parse_name_map(xml_node_list):
 
     return name_map
 
+def liveTraj(qtraj, position, robot):
+    goal = qtraj.get()
+    q_i = robot.angles
+    p = q_i
+    q_dot_i = [0,0,0,0,0,0,0]
+    q_dotdot_i = [0,0,0,0,0,0,0]
+    q_f = position
+    i = 0
+    tf = 3
+    # IP = robot.angles
+    
+    
+
+    while i <= len(t_array):
+        for j = range(7):
+            
+            start_time = time.time()
+            if i == len(t_array):
+                t = tf
+            else:
+                t = t_array[i]
+                a0 = q_i[j]
+                a1 = q_dot_i[j]
+                a2 = 0.5 * q_dotdot_i[j]
+                a3 = 1.0 / (2.0 * tf**3.0) * (20.0 * (q_f[j] - q_i[j]) - (8.0 * q_dot_f[j] + 12.0 * q_dot_i[j]) * tf - (3.0 * q_dotdot_f[j] - q_dotdot_i[j]) * tf**2.0)
+                a4 = 1.0 / (2.0 * tf**4.0) * (30.0 * (q_i[j] - q_f[j]) + (14.0 * q_dot_f[j] + 16.0 * q_dot_i[j]) * tf + (3.0 * q_dotdot_f[j] - 2.0 * q_dotdot_i[j]) * tf**2.0)
+                a5 = 1.0 / (2.0 * tf**5.0) * (12.0 * (q_f[j] - q_i[j]) - (6.0 * q_dot_f[j] + 6.0 * q_dot_i[j]) * tf - (q_dotdot_f[j] - q_dotdot_i[j]) * tf**2.0)
+
+                p[j] = a0 + a1*t + a2*t**2 + a3*t**3 + a4*t**4 + a5*t**5
+#                 v[j] = a1 + 2*a2*t + 3*a3*t**2 + 4*a4*t**3 + 5*a5*t**4
+#                 a[j] = 2*a2 + 6*a3*t + 12*a4*t**2 + 20*a5*t**3
+        robot.set_servo_angle_j(angles=p, is_radian=False)
+        tts = time.time() - start_time
+        sleep = 0.006 - tts
+
+        if tts > 0.006:
+            sleep = 0
+
+            #print(tts)
+            time.sleep(sleep)
+            i += 1
+
 
 def test_Client(host):
     arm1 = XArmAPI('192.168.1.208')
@@ -459,7 +501,8 @@ def test_Client(host):
 #                                         is_radian=False)
 
         if velocity == 7:
-            while velocity ==7:
+            while velocity == 7:
+                
                 param = danceq.get()
                 velocity = param[1]
                 
