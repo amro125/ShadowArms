@@ -49,11 +49,11 @@ PortConsole = 32075
 PortConfigurable = 32076
 NSample = 10
 
+
 class MyHandler(server.Handler):
     def on_peer_connected(self, peer):
         # Handler for peer connected
         print('Peer connected: {}'.format(peer))
-
 
     def on_peer_disconnected(self, peer):
         # Handler for peer disconnected
@@ -66,13 +66,14 @@ class MyHandler(server.Handler):
 
             if chn == 13:  # this means its channel 14!!!!!
                 if command.command == 'note_on':
-                    #print(chn)
+                    # print(chn)
                     key = command.params.key.__int__()
                     velocity = command.params.velocity
                     print('key {} with velocity {}'.format(key, velocity))
-                    params = [key,velocity]
+                    params = [key, velocity]
                     danceq.put(params)
-                    #step[key-1].start()
+                    # step[key-1].start()
+
 
 def setup():
     for a in arms:
@@ -84,6 +85,7 @@ def setup():
         a.set_state(0)
         a.set_servo_angle(angle=[0.0, -1.0, 0.0, 1.309, 0.0, 0.88, 0.0], wait=False, speed=0.4, acceleration=0.25,
                           is_radian=True)
+
 
 def parse_name_map(xml_node_list):
     name_map = {}
@@ -97,45 +99,57 @@ def parse_name_map(xml_node_list):
 
     return name_map
 
+
 def liveTraj(qtraj, position, robot):
-    goal = qtraj.get()
-    q_i = robot.angles
-    p = q_i
-    q_dot_i = [0,0,0,0,0,0,0]
-    q_dotdot_i = [0,0,0,0,0,0,0]
-    q_f = position
-    i = 0
-    tf = 3
-    # IP = robot.angles
-    
-    
+    while True:
+        receive = qtraj.get()
+        position = receive[0]
+        robot = receive[1]
+        robot.set_mode(1)
+        robot.set_state(0)
+        q_i = robot.angles
+        # arm2.angles
+        # q_i = s[1]
+        q_dot_i = 0
+        q_dot_f = 0
+        q_dotdot_i = 0
+        q_dotdot_f = 0
+        q_f = position
+        i = 0
+        tf = 3
+        p = q_i[:]
 
-    while i <= len(t_array):
-        for j = range(7):
-            
-            start_time = time.time()
-            if i == len(t_array):
-                t = tf
-            else:
-                t = t_array[i]
+        t_array = np.arange(0, tf, 0.006)
+        print("start")
+
+        while i <= len(t_array):
+            for j in range(7):
+                start_time = time.time()
+
+                if i == len(t_array):
+                    t = tf
+                else:
+                    t = t_array[i]
                 a0 = q_i[j]
-                a1 = q_dot_i[j]
-                a2 = 0.5 * q_dotdot_i[j]
-                a3 = 1.0 / (2.0 * tf**3.0) * (20.0 * (q_f[j] - q_i[j]) - (8.0 * q_dot_f[j] + 12.0 * q_dot_i[j]) * tf - (3.0 * q_dotdot_f[j] - q_dotdot_i[j]) * tf**2.0)
-                a4 = 1.0 / (2.0 * tf**4.0) * (30.0 * (q_i[j] - q_f[j]) + (14.0 * q_dot_f[j] + 16.0 * q_dot_i[j]) * tf + (3.0 * q_dotdot_f[j] - 2.0 * q_dotdot_i[j]) * tf**2.0)
-                a5 = 1.0 / (2.0 * tf**5.0) * (12.0 * (q_f[j] - q_i[j]) - (6.0 * q_dot_f[j] + 6.0 * q_dot_i[j]) * tf - (q_dotdot_f[j] - q_dotdot_i[j]) * tf**2.0)
+                a1 = q_dot_i
+                a2 = 0.5 * q_dotdot_i
+                a3 = 1.0 / (2.0 * tf ** 3.0) * (20.0 * (q_f[j] - q_i[j]) - (8.0 * q_dot_f + 12.0 * q_dot_i) * tf - (
+                        3.0 * q_dotdot_f - q_dotdot_i) * tf ** 2.0)
+                a4 = 1.0 / (2.0 * tf ** 4.0) * (30.0 * (q_i[j] - q_f[j]) + (14.0 * q_dot_f + 16.0 * q_dot_i) * tf + (
+                        3.0 * q_dotdot_f - 2.0 * q_dotdot_i) * tf ** 2.0)
+                a5 = 1.0 / (2.0 * tf ** 5.0) * (
+                        12.0 * (q_f[j] - q_i[j]) - (6.0 * q_dot_f + 6.0 * q_dot_i) * tf - (
+                            q_dotdot_f - q_dotdot_i) * tf ** 2.0)
 
-                p[j] = a0 + a1*t + a2*t**2 + a3*t**3 + a4*t**4 + a5*t**5
-#                 v[j] = a1 + 2*a2*t + 3*a3*t**2 + 4*a4*t**3 + 5*a5*t**4
-#                 a[j] = 2*a2 + 6*a3*t + 12*a4*t**2 + 20*a5*t**3
-        robot.set_servo_angle_j(angles=p, is_radian=False)
-        tts = time.time() - start_time
-        sleep = 0.006 - tts
+                p[j] = a0 + a1 * t + a2 * t ** 2 + a3 * t ** 3 + a4 * t ** 4 + a5 * t ** 5
 
-        if tts > 0.006:
-            sleep = 0
+            arm2.set_servo_angle_j(angles=p, is_radian=False)
+            tts = time.time() - start_time
+            sleep = 0.006 - tts
 
-            #print(tts)
+            if tts > 0.006:
+                sleep = 0
+
             time.sleep(sleep)
             i += 1
 
@@ -156,9 +170,18 @@ def test_Client(host):
     rest1 = [arm2, arm5, arm7, arm9]
 
     rest = [arm1, arm4, arm6, arm8, arm10]
-    # left = [arm1, arm2, arm5, arm8]
-    # right = [arm3, arm4, arm7, arm10]
+    left = [arm2, arm5, arm8]
+    right = [arm3, arm7, arm10]
+    head = [arm1, arm4, arm6]
+
+    positions1 = [arm4, arm3, arm2, arm1]
+    positions2 = [arm7, arm6, arm5]
+    positions3 = [ arm10, arm9, arm8]
+    positionq=[posq1, posq2,posq3,posq4]
+    totalpositions = [positions1, positions2, positions3]
     client = MotionSDK.Client(host, PortConfigurable)
+    row=0
+
 
     print("Connected to %s:%d" % (host, PortConfigurable))
 
@@ -173,15 +196,16 @@ def test_Client(host):
         raise RuntimeError(
             "failed to send channel list request to Configurable service")
 
-
     num_frames = 0
     xml_node_list = None
     hips_key = None
     hips2_key = None
     shoulder_key = None
     hand_key = None
+    Lhand_key = None
 
 
+    followCount = 0
     lastpoint = 0.00
     counter = 0
     t_elapsed = 0
@@ -195,7 +219,7 @@ def test_Client(host):
     arm.set_state(0)
 
     arm.set_servo_angle(angle=[0.0, -1.0, 0.0, 1.309, 0.0, 0.88, 0.0], wait=True, speed=0.4, acceleration=0.25,
-                      is_radian=True)
+                        is_radian=True)
     for a in arms:
         a.set_mode(1)
         a.set_state(0)
@@ -203,13 +227,13 @@ def test_Client(host):
     input("press enter to begin")
     time.sleep(5)
     map = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    q=[]
-    q2=[]
-    q3=[]
-    q4=[]
-    q5=[]
-    q6 =[]
-    q7 =[]
+    q = []
+    q2 = []
+    q3 = []
+    q4 = []
+    q5 = []
+    q6 = []
+    q7 = []
     q8 = []
     q9 = []
     q10 = []
@@ -266,15 +290,9 @@ def test_Client(host):
                 if "RightHand" == name:
                     hand_key = key
 
-
-
-
-
-
-
                 # print("{}:{}".format(key, name))
 
-            #print(",".join(["{}".format(v) for v in flat_list]))
+            # print(",".join(["{}".format(v) for v in flat_list]))
 
             if None == hips_key:
                 raise RuntimeError("Hips sensor missing from name map")
@@ -294,9 +312,8 @@ def test_Client(host):
         rotation3 = []
         position3 = []
         legrotation = []
-        handrotation =[]
+        handrotation = []
         Lhandrotation = []
-
 
         item = container[hips_key]
         item2 = container[hips2_key]
@@ -342,14 +359,14 @@ def test_Client(host):
         # 29: RightToe
         # 30: RightToeEnd
         # 31: SpineLow
-        for i in range(0,3):
+        for i in range(0, 3):
             rotation.append((item.value(i)))
             rotation2.append((item2.value(i)))
             rotation3.append((item3.value(i)))
             legrotation.append((legitem.value(i)))
             handrotation.append((handitem.value(i)))
             Lhandrotation.append((Lhanditem.value(i)))
-        for i in range(4,7):
+        for i in range(4, 7):
             handposition.append(handitem.value(i))
             Lhandposition.append(Lhanditem.value(i))
         #     position2.append(item2.value(i))
@@ -361,7 +378,7 @@ def test_Client(host):
             offset4 = rotation3[0]
             offset5 = rotation2[0]
             legoffset = legrotation[0]
-            leanoffset= rotation3[2]
+            leanoffset = rotation3[2]
             handoffset1 = handrotation[0]
             handoffset2 = handrotation[2]
             Lhandoffset1 = Lhandrotation[0]
@@ -373,16 +390,13 @@ def test_Client(host):
             Lhandoffsety = Lhandposition[1]
             Lhandoffsetz = Lhandposition[2]
 
-
-
-
         mapangle = rotation[0] - offset
         mapangle2 = rotation[1] - offset2
         mapangle3 = rotation2[1] - offset3
         mapangle5 = rotation3[0] - offset4
         mapleg = legrotation[0] - legoffset
-        handtwist = handrotation[0] -handoffset1
-        handup = handrotation[2]-handoffset2
+        handtwist = handrotation[0] - handoffset1
+        handup = handrotation[2] - handoffset2
         Lhandtwist = Lhandrotation[0] - Lhandoffset1
         Lhandup = Lhandrotation[2] - Lhandoffset2
         handx = handposition[0] - handoffsetx
@@ -420,19 +434,19 @@ def test_Client(host):
             param = danceq.get()
             velocity = param[1]
         if velocity == 2:
-            arm.set_servo_angle_j(angles=[0.0 - map[2], -1.0 - (map[4]/5), 0.0, 1.309-(map[3]*5.5), -map[1], 0.88+2*map[0], 0.0], is_radian=True)
+            arm.set_servo_angle_j(
+                angles=[0.0 - map[2]/2, -1.0 - (map[4] / 5), 0.0, 1.309 - (map[3] * 5.5), -map[1], 0.88 + 2 * map[0],
+                        0.0], is_radian=True)
 
         if velocity == 20:
             print("swap")
 
-
         if velocity == 3:
             dance.append(map[:])
             arm.set_servo_angle_j(
-                angles=[0.0 - map[2], -1.0 - (map[4] / 5), 0.0, 1.309 - (map[3] * 5.5), -map[1], 0.88 + 2 * map[0],
+                angles=[0.0 - map[2]/2, -1.0 - (map[4] / 5), 0.0, 1.309 - (map[3] * 5.5), -map[1], 0.88 + 2 * map[0],
                         0.0], is_radian=True)
             Dance_offset = 0
-
 
         if velocity == 4:
             if Dance_offset == 0:
@@ -445,7 +459,8 @@ def test_Client(host):
                 otherdo = np.subtract(map, Calibrate2)
                 # print(Calibrate2)
                 arm.set_servo_angle_j(
-                    angles=[0.0 - Calibrate2[2], -1.0 - (map[4] / 5), 0.0, 1.309 - (map[3] * 5.5), -map[1], 0.88 + 2 * map[0],
+                    angles=[0.0 - Calibrate2[2]/2, -1.0 - (map[4] / 5), 0.0, 1.309 - (map[3] * 5.5), -map[1],
+                            0.88 + 2 * map[0],
                             0.0], is_radian=True)
                 for a in rest1:
                     a.set_servo_angle_j(angles=[0.0, -1.0, 0.0, 1.309, otherdo[1], 0.88 + otherdo[0] * 2, 0.0],
@@ -453,12 +468,10 @@ def test_Client(host):
                 for a in rest:
                     # dancetodo = np.subtract(dance[Dance_offset], dance[0])
                     a.set_servo_angle_j(angles=[0.0, -1.0, 0.0, 1.309, -otherdo[1], 0.88 + otherdo[0] * 2, 0.0],
-                        is_radian=True)
+                                        is_radian=True)
                 #     print("sending")
             dance.append(map[:])
             Dance_offset += 1
-
-
 
         if velocity == 5:
             calibrate = map[:]
@@ -477,8 +490,6 @@ def test_Client(host):
 
             calibratepos = 0
 
-
-
         if velocity == 6:
             if calibratepos == 0:
                 for a in arms:
@@ -493,70 +504,53 @@ def test_Client(host):
 
                 for a in left:
                     # print(handpos[7],handpos[8])
-                    a.set_servo_angle_j(angles=[0.0, -45+handpos[12]/10, 0.0+handpos[13]/10, 45 + handpos[12]/10 + handpos[14]/10, -handpos[8]*40, handpos[7]*40, 0.0],
+                    a.set_servo_angle_j(angles=[0.0, -45 + handpos[12] / 10, 0.0 + handpos[13] / 10,
+                                                45 + handpos[12] / 10 + handpos[14] / 10, -handpos[8] * 40,
+                                                handpos[7] * 40, 0.0],
                                         is_radian=False)
+                for a in right:
+                    a.set_servo_angle_j(angles=[0.0, -45 + handpos[12] / 10, 0.0 - handpos[13] / 10,
+                                                45 + handpos[12] / 10 + handpos[14] / 10, 0.0,
+                                                0.0, 0.0],
+                                        is_radian=False)
+                for a in head:
+                    a.set_servo_angle_j(angles=[0.0, -45 , 0.0, 45, -handpos[8] * 40,
+                                                handpos[7] * 40, 0.0], is_radian=False)
+            followCount = 0
 
-#                 for a in right:
-#                     a.set_servo_angle_j(angles=[0.0, 0.0+handpos[9]/20, 0.0+handpos[10]/20, 90 + handpos[9]/20 + handpos[11]/20, -handpos[5], handpos[6], 0.0],
-#                                         is_radian=False)
 
         if velocity == 7:
-            while velocity == 7:
-                
+
+
+        if velocity == 8:
+            spots=[[-55,-70,0,90,0,0,0],[-75,-95,-70,60,0,0,0],[0,80,0,65,-10,165,0],[-92,80,-140,65,-80,120,0],[-180,25,-170,140,-10,30,0],[-141,100,300,60,-150,-21,0],[-151,-50,-75,70,-180,-21,0],[-60,-100,-80,180,-180,50,0]]
+            while velocity == 8:
                 param = danceq.get()
                 velocity = param[1]
-                
+                check = [map[2],map[4], 0, map[3], map[1], map[0], 0]
+                close = np.zeros(len(totalpositions[row]))
+                for x in range(len(spots)):
+                    diff = np.subtract(spots, check)
+                    close[x]= np.linalg.norm(diff)
+                bestpos = np.amin(close)
+                # spots[bestpos]
+                for x in range(len(totalpositions[row])):
+                    goto = ((x+1)/4)*np.array(spots[bestpos])
+                    positionq[x].put([goto, totalpositions[row][x]])
+                    time.sleep(0.25)
+                row += 1
 
 
 
 
 
-
-
-
-
-            # t = (start-end)
-            # if t > 0.004:
-            #     t = 0
-            # time.sleep(0.004-t)
-        #print(rotation3[0], rotation2[0])
-
-        # diff = mapangle3 - lastpoint
-        #     if diff < 0:
-        #      mapangle3 = lastpoint + 0.001
-        #     elif diff > 0:
-        #      mapangle3 = lastpoint - 0.001
-        # if counter == 3500:
-        #     print("move")
-        # #print(diff)
-        # # arm.set_servo_angle_j(angles=[0.0 , -1.0, 0.0, 1.309, mapangle2, 0.88 + mapangle3, 0.0], is_radian=True)
-        # if counter == 3700:
-        #     arm.set_mode(0)
-        #     arm.set_state(0)
-        #     arm.set_servo_angle(angle=[1.57, 0.0, -1.57, 1.57, 0.0, 0.0, 0.0], wait=True, speed=0.4, acceleration=0.25,
-        #                         is_radian=True)
-        #     arm.set_mode(1)
-        #     arm.set_state(0)
-        #
-        # if counter > 3700:
-        #     arm.set_servo_angle_j(angles=[1.57 + map[2], 0.0, -1.57 - map[2] - map[1], 1.57, 0.0-map[5], 0 + 2 * map[0]+map[6],
-        #                 0.0], is_radian=True)
-
-
-    # lastpoint = mapangle
         #
         counter += 1
 
-
-
-
-        #print("r: " + ",".join(["{}".format(round(v, 8)) for v in rotation]))
+        # print("r: " + ",".join(["{}".format(round(v, 8)) for v in rotation]))
         # print("c: " + ",".join(["{}".format(round(v, 8)) for v in position]))
 
         num_frames += 1
-
-
-
 
 
 def test_LuaConsole(host):
@@ -568,16 +562,16 @@ def test_LuaConsole(host):
     # General Lua scripting interface.
     #
     lua_chunk = \
-      "if not node.is_reading() then" \
-      "   node.close()" \
-      "   node.scan()" \
-      "   node.start()" \
-      " end" \
-      " if node.is_reading() then" \
-      "   print('Reading from ' .. node.num_reading() .. ' device(s)')" \
-      " else" \
-      "   print('Failed to start reading')" \
-      " end"
+        "if not node.is_reading() then" \
+        "   node.close()" \
+        "   node.scan()" \
+        "   node.start()" \
+        " end" \
+        " if node.is_reading() then" \
+        "   print('Reading from ' .. node.num_reading() .. ' device(s)')" \
+        " else" \
+        "   print('Failed to start reading')" \
+        " end"
 
     # print(LuaConsole.SendChunk(client, lua_chunk, 5))
 
@@ -587,8 +581,6 @@ def test_LuaConsole(host):
     # print("node.is_reading() = {}".format(node.is_reading()))
 
 
-
-
 def main(argv):
     # Set the default host name parameter. The SDK is socket based so any
     # networked Motion Service is available.
@@ -596,7 +588,15 @@ def main(argv):
     if len(argv) > 1:
         host = argv[1]
     global danceq
+    global posq1
+    global posq2
+    global posq3
+    global posq4
     danceq = Queue()
+    posq1 = Queue()
+    posq2 = Queue()
+    posq3 = Queue()
+    posq4 = Queue()
     arm1 = XArmAPI('192.168.1.208')
     arm2 = XArmAPI('192.168.1.244')
     arm3 = XArmAPI('192.168.1.203')
@@ -614,21 +614,33 @@ def main(argv):
     totalArms = len(arms)
 
     setup()
+
     def test():
         ROBOT = "xArms"
         PORT = 5004
         rtp_midi = RtpMidi(ROBOT, MyHandler(), PORT)
         rtp_midi.run()
+
     ROBOT = "xArms"
     PORT = 5004
     rtpthread = Thread(target=test, args=())
     rtpthread.start()
-    #test_LuaConsole(host)
+
+    livetraj1 = Thread(target = liveTraj, args=())
+    livetraj2 = Thread(target=liveTraj, args=())
+    livetraj3 = Thread(target=liveTraj, args=())
+    livetraj4 = Thread(target=liveTraj, args=())
+    livetraj1.start()
+    livetraj2.start()
+    livetraj3.start()
+    livetraj4.start()
+
+    # test_LuaConsole(host)
     test_Client(host)
 
     # Requires a data file. Do not test by default.
-    #test_File()
+    # test_File()
+
 
 if __name__ == "__main__":
-
     sys.exit(main(sys.argv))
